@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.log
+.DS_Store
+.env
+.env.*
+node_modules/
+.tmp/
+/tmp_rovodev_*
+/bin/
+.idea/
+.vscode/

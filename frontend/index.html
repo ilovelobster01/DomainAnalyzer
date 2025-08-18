@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Web Recon Visualizer</title>
+    <link rel="stylesheet" href="/static/style.css" />
+    <script src="https://unpkg.com/cytoscape@3.27.0/dist/cytoscape.min.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Web Recon Visualizer</h1>
+        <p>Enter a domain to enumerate subdomains, resolve IPs, and visualize co-hosted domains.</p>
+      </header>
+
+      <section class="controls">
+        <input id="domain" type="text" placeholder="example.com" />
+        <button id="analyzeBtn">Analyze</button>
+        <span id="status"></span>
+      </section>
+
+      <section class="toolbar">
+        <div class="filters">
+          <label><input type="checkbox" id="filter-domain" checked /> Domain</label>
+          <label><input type="checkbox" id="filter-subdomain" checked /> Subdomains</label>
+          <label><input type="checkbox" id="filter-ip" checked /> IPs</label>
+          <label><input type="checkbox" id="filter-cohost" checked /> Co-hosts</label>
+        </div>
+        <div class="search">
+          <input id="search" type="text" placeholder="Search nodes (regex or text)" />
+          <button id="clearSearch">Clear</button>
+        </div>
+        <div class="history">
+          <select id="historySelect"></select>
+          <button id="loadHistoryBtn">Load</button>
+          <button id="clearHistoryBtn">Clear History</button>
+        </div>
+        <div class="exports">
+          <button id="fitBtn">Fit</button>
+          <button id="exportPngBtn">Export PNG</button>
+          <button id="exportJsonBtn">Export JSON</button>
+          <button id="settingsBtn">Settings</button>
+        </div>
+      </section>
+
+      <div id="settingsModal" class="modal" style="display:none">
+        <div class="modal-content">
+          <h3>Settings</h3>
+          <div class="grid">
+            <div>
+              <label>Mode</label>
+              <select id="opt-mode">
+                <option value="passive">Passive</option>
+                <option value="aggressive">Aggressive</option>
+              </select>
+            </div>
+            <div>
+              <label>Providers</label>
+              <div class="providers">
+                <label><input type="checkbox" id="opt-amass" checked /> Amass</label>
+                <label><input type="checkbox" id="opt-sublist3r" checked /> Sublist3r</label>
+                <label><input type="checkbox" id="opt-crtsh" checked /> crt.sh</label>
+              </div>
+            </div>
+            <div>
+              <label>Timeouts (seconds)</label>
+              <div class="timeouts">
+                <label>Amass <input type="number" id="opt-t-amass" value="240" min="30" max="1200" /></label>
+                <label>Sublist3r <input type="number" id="opt-t-sublist3r" value="360" min="30" max="1200" /></label>
+                <label>crt.sh <input type="number" id="opt-t-crtsh" value="20" min="5" max="120" /></label>
+              </div>
+            </div>
+          </div>
+          <div class="actions">
+            <button id="settingsSave">Save</button>
+            <button id="settingsCancel">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="ctxMenu" class="ctx-menu" style="display:none">
+        <ul></ul>
+      </div>
+
+      <section class="content">
+        <div class="left">
+          <div id="graph"></div>
+        </div>
+        <div class="right">
+          <h2>WHOIS</h2>
+          <pre id="whois"></pre>
+          <h2>Details</h2>
+          <div id="details"></div>
+        </div>
+      </section>
+
+      <footer>
+        <small>Tip: For best results, install Amass or Sublist3r. Use responsibly and within legal boundaries.</small>
+      </footer>
+    </div>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>

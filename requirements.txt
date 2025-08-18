@@ -1,0 +1,7 @@
+fastapi>=0.110
+uvicorn[standard]>=0.23
+httpx>=0.24
+dnspython>=2.4
+python-whois>=0.8
+sublist3r>=1.0.0
+python-dotenv>=1.0

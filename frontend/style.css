@@ -1,0 +1,35 @@
+html, body { height: 100%; margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Helvetica, Arial, sans-serif; }
+.container { max-width: 1200px; margin: 0 auto; padding: 1rem; }
+header { margin-bottom: 1rem; }
+.controls { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; }
+.controls input { flex: 0 0 260px; padding: 0.5rem; }
+.controls button { padding: 0.5rem 0.75rem; background: #4F46E5; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+.controls #status { margin-left: 0.5rem; color: #374151; }
+.toolbar { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 0.75rem; align-items: center; margin: 0.5rem 0 0.5rem; }
+.toolbar .filters { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+.toolbar .search { display: flex; gap: 0.5rem; }
+.toolbar .history { display: flex; gap: 0.5rem; align-items: center; }
+.toolbar input[type="text"], .toolbar select { padding: 0.5rem; min-width: 220px; }
+.toolbar button { padding: 0.4rem 0.6rem; background: #111827; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+.content { display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; height: calc(100vh - 240px); }
+#graph { height: 100%; border: 1px solid #e5e7eb; border-radius: 6px; }
+.right { overflow: auto; }
+pre { background: #0b1020; color: #E5E7EB; padding: 0.5rem; border-radius: 6px; max-height: 50vh; overflow: auto; }
+footer { margin-top: 1rem; color: #6b7280; }
+
+/* Modal */
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; }
+.modal .modal-content { background: #fff; color: #111827; border-radius: 8px; padding: 1rem; width: 520px; max-width: calc(100vw - 2rem); }
+.modal .grid { display: grid; grid-template-columns: 1fr; gap: 0.75rem; }
+.modal .providers, .modal .timeouts { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+.modal .actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 0.75rem; }
+
+/* highlight & fade */
+.cy-faded { opacity: 0.15; }
+.cy-highlight { outline: 2px solid #F59E0B; }
+
+/* context menu */
+.ctx-menu { position: absolute; z-index: 1000; background: #111827; color: #fff; border: 1px solid #374151; border-radius: 6px; min-width: 180px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+.ctx-menu ul { list-style: none; margin: 0; padding: 0.25rem 0; }
+.ctx-menu li { padding: 0.4rem 0.75rem; cursor: pointer; }
+.ctx-menu li:hover { background: #1F2937; }

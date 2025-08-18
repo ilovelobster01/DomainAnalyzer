@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.swp
+.venv/
+.git/
+.tmp/
+*.log
+
+# temp files created by the assistant
+/tmp_rovodev_*
