@@ -13,6 +13,7 @@ let cy = cytoscape({
     { selector: 'node[type="domain"]', style: { 'background-color': '#4F46E5' }},
     { selector: 'node[type="subdomain"]', style: { 'background-color': '#7C3AED' }},
     { selector: 'node[type="cohost"]', style: { 'background-color': '#6B7280' }},
+    { selector: 'node[type="port"]', style: { 'background-color': '#10B981' } },
     { selector: 'edge', style: { 'width': 1, 'line-color': '#9CA3AF', 'target-arrow-color': '#9CA3AF', 'curve-style': 'bezier', 'label': 'data(label)', 'font-size': 7, 'min-zoomed-font-size': 6, 'color': '#374151', 'text-background-color': '#fff', 'text-background-opacity': 0.5, 'text-background-padding': 1, 'text-margin-y': -2 } },
     { selector: '.hidden', style: { 'display': 'none' }},
     { selector: '.faded', style: { 'opacity': 0.15 }},
@@ -73,6 +74,14 @@ function buildGraph(data) {
     for (const ip of ips4) {
       addNode(ip, ip, 'ip');
       addEdge(host, ip, 'a-record', 'A');
+      // Nmap ports
+      const nmap = data.ip_ports?.[ip]?.ports || [];
+      for (const p of nmap) {
+        const portId = `${ip}:${p.protocol}/${p.port}`;
+        const portLabel = `${p.protocol}/${p.port} ${p.service || ''}`.trim();
+        addNode(portId, portLabel, 'port');
+        addEdge(ip, portId, 'port', p.protocol.toUpperCase());
+      }
       // reverse IP co-hosts
       const rev = data.reverse_ip?.[ip] || [];
       for (const ch of rev) {
@@ -179,7 +188,7 @@ function persistSettings(s) {
 }
 
 function uiLoadSettings() {
-  const s = Object.assign({ mode: 'passive', providers: { amass: true, sublist3r: true, crtsh: true }, timeouts: { amass: 240, sublist3r: 360, crtsh: 20 } }, getSettings());
+  const s = Object.assign({ mode: 'passive', providers: { amass: true, sublist3r: true, crtsh: true }, timeouts: { amass: 240, sublist3r: 360, crtsh: 20 }, nmap: { enabled: false, top_ports: 100, timing: 'T4', skip_host_discovery: true, udp: false, timeout_per_host: 60, concurrency: 3 } }, getSettings());
   const g = (id) => document.getElementById(id);
   g('opt-mode').value = s.mode;
   g('opt-amass').checked = !!s.providers.amass;
@@ -188,6 +197,13 @@ function uiLoadSettings() {
   g('opt-t-amass').value = s.timeouts.amass;
   g('opt-t-sublist3r').value = s.timeouts.sublist3r;
   g('opt-t-crtsh').value = s.timeouts.crtsh;
+  g('opt-nmap-enabled').checked = !!s.nmap.enabled;
+  g('opt-nmap-topports').value = s.nmap.top_ports;
+  g('opt-nmap-timing').value = s.nmap.timing;
+  g('opt-nmap-pn').checked = !!s.nmap.skip_host_discovery;
+  g('opt-nmap-udp').checked = !!s.nmap.udp;
+  g('opt-nmap-timeout').value = s.nmap.timeout_per_host;
+  g('opt-nmap-conc').value = s.nmap.concurrency;
 }
 
 function uiCollectSettings() {
@@ -203,6 +219,15 @@ function uiCollectSettings() {
       amass: parseInt(g('opt-t-amass').value, 10) || 240,
       sublist3r: parseInt(g('opt-t-sublist3r').value, 10) || 360,
       crtsh: parseInt(g('opt-t-crtsh').value, 10) || 20,
+    },
+    nmap: {
+      enabled: g('opt-nmap-enabled').checked,
+      top_ports: parseInt(g('opt-nmap-topports').value, 10) || 100,
+      timing: g('opt-nmap-timing').value,
+      skip_host_discovery: g('opt-nmap-pn').checked,
+      udp: g('opt-nmap-udp').checked,
+      timeout_per_host: parseInt(g('opt-nmap-timeout').value, 10) || 60,
+      concurrency: parseInt(g('opt-nmap-conc').value, 10) || 3,
     }
   };
   return s;

@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install tools needed for Amass
-RUN apt-get update && apt-get install -y --no-install-recommends curl unzip ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends curl unzip ca-certificates nmap && rm -rf /var/lib/apt/lists/*
 
 # Install Amass in the image via official release (Linux amd64 example)
 ARG AMASS_VERSION=v3.25.1

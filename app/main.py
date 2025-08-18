@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import os
 from pathlib import Path
-from typing import Dict, List, Set
+from typing import Dict, List, Set, Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
@@ -17,12 +17,22 @@ from .services.subdomain_enum import enumerate_subdomains, tooling_status
 from .services.dns_utils import resolve_records
 from .services.reverse_ip import reverse_lookup_many
 from .services.ip_info import ip_rdap_many
+from .services.nmap_probe import probe_nmap_many
 
 
 class AnalyzeOptions(BaseModel):
     mode: str = Field("passive", description="'passive' or 'aggressive'")
     providers: Dict[str, bool] = Field(default_factory=lambda: {"amass": True, "sublist3r": True, "crtsh": True})
     timeouts: Dict[str, int] = Field(default_factory=lambda: {"amass": 240, "sublist3r": 360, "crtsh": 20})
+    nmap: Dict[str, Optional[object]] = Field(default_factory=lambda: {
+        "enabled": False,
+        "top_ports": 100,
+        "timing": "T4",
+        "skip_host_discovery": True,
+        "udp": False,
+        "timeout_per_host": 60,
+        "concurrency": 3,
+    })
 
 class AnalyzeRequest(BaseModel):
     domain: str = Field(..., description="The root domain to analyze, e.g., example.com")
@@ -39,6 +49,7 @@ class AnalyzeResponse(BaseModel):
     dns_cname_records: Dict[str, List[str]]
     reverse_ip: Dict[str, List[str]]
     ip_info: Dict[str, dict]
+    ip_ports: Dict[str, Dict]
 
 
 load_dotenv()
@@ -95,6 +106,20 @@ async def analyze(req: AnalyzeRequest):
     # RDAP IP info
     ip_info = await ip_rdap_many(sorted(ips))
 
+    # Optional Nmap probing
+    nmap_opts = (req.options.nmap if req.options and req.options.nmap else {})
+    ip_ports: Dict[str, Dict] = {}
+    if nmap_opts and nmap_opts.get("enabled") and ips:
+        ip_ports = await probe_nmap_many(
+            sorted(ips),
+            top_ports=int(nmap_opts.get("top_ports", 100)),
+            timing=str(nmap_opts.get("timing", "T4")),
+            skip_host_discovery=bool(nmap_opts.get("skip_host_discovery", True)),
+            udp=bool(nmap_opts.get("udp", False)),
+            timeout_per_host=int(nmap_opts.get("timeout_per_host", 60)),
+            concurrency=int(nmap_opts.get("concurrency", 3)),
+        )
+
     # Split per type
     dns_a = {h: recs.get("A", []) for h, recs in all_records.items()}
     dns_aaaa = {h: recs.get("AAAA", []) for h, recs in all_records.items()}
@@ -110,4 +135,5 @@ async def analyze(req: AnalyzeRequest):
         dns_cname_records=dns_cname,
         reverse_ip=reverse_map,
         ip_info=ip_info,
+        ip_ports=ip_ports,
     )

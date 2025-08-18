@@ -71,6 +71,20 @@
                 <label>crt.sh <input type="number" id="opt-t-crtsh" value="20" min="5" max="120" /></label>
               </div>
             </div>
+            <div>
+              <label>Nmap</label>
+              <div class="providers">
+                <label><input type="checkbox" id="opt-nmap-enabled" /> Probe with Nmap</label>
+              </div>
+              <div class="timeouts">
+                <label>Top ports <input type="number" id="opt-nmap-topports" value="100" min="10" max="5000" /></label>
+                <label>Timing <select id="opt-nmap-timing"><option>T3</option><option selected>T4</option><option>T5</option></select></label>
+                <label><input type="checkbox" id="opt-nmap-pn" checked /> Skip host discovery (-Pn)</label>
+                <label><input type="checkbox" id="opt-nmap-udp" /> UDP (slower)</label>
+                <label>Timeout/host (s) <input type="number" id="opt-nmap-timeout" value="60" min="10" max="600" /></label>
+                <label>Concurrency <input type="number" id="opt-nmap-conc" value="3" min="1" max="10" /></label>
+              </div>
+            </div>
           </div>
           <div class="actions">
             <button id="settingsSave">Save</button>

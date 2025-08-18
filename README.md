@@ -68,8 +68,9 @@ Setup script (recommended)
 Settings
 - Click Settings in the toolbar to choose:
   - Mode: Passive or Aggressive (affects Amass)
-  - Providers: Amass, Sublist3r, crt.sh
+  - Providers: Amass, Sublist3r, crt.sh (Subfinder supported if installed; toggle coming soon)
   - Timeouts per provider
+  - Nmap: enable probing, top ports, timing (T3/T4/T5), -Pn, UDP, timeout/host, concurrency
 
 Health check
 - GET /api/status returns JSON with status and whether amass/sublist3r are available on PATH.
