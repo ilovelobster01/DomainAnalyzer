@@ -8,8 +8,10 @@ services:
     environment:
       - TOR_NewCircuitPeriod=30
       - TOR_MaxCircuitDirtiness=600
-    ports:
-      - "9050:9050"  # expose to host for local dev if desired
+    # Note: you generally do NOT need to expose tor 9050 to the host for the app to work.
+    # If you want to use tor from the host, uncomment the following line and ensure 9050 is free.
+    # ports:
+    #   - "9050:9050"
     networks:
       - tor_net
 

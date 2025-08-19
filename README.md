@@ -62,26 +62,52 @@ Quick start
    http://localhost:8000
 
 Docker
-- Build (auto-arch): docker buildx build --platform linux/amd64,linux/arm64 -t web-recon .
-  - If you are on Apple Silicon (arm64) and want a single-arch image: docker buildx build --platform linux/arm64 -t web-recon .
-  - If you are on x86_64: docker build -t web-recon .
-- Run:   docker run --rm -p 8000:8000 web-recon
-  Then visit http://localhost:8000
-- Includes Amass and Nmap installed from official sources by default.
+- Build (auto-arch):
+  - docker buildx build --platform linux/amd64,linux/arm64 -t web-recon .
+  - Or single-arch: docker build -t web-recon .
+- Run:
+  - docker run --rm -p 8000:8000 web-recon
+  - Then visit http://localhost:8000
 
-Docker Compose (with Tor proxy)
-- A docker-compose.yml is provided to run a dedicated Tor SOCKS5 proxy alongside the web app.
-- Quick start:
-  - docker compose up --build
-  - This brings up two services on a shared network:
-    - tor: SOCKS5 proxy exposed as host:9050 and available to other containers at hostname tor:9050
-    - web: the app, configured by default to prefer socks5://tor:9050 if reachable
-- The app will attempt to detect a SOCKS proxy in this order:
-  1) TOR_SOCKS_URL env (if set)
-  2) socks5://tor:9050 (Docker Compose service)
-  3) socks5://127.0.0.1:9050 (local Tor)
-- In Settings, you can toggle “Route HTTP via Tor (SOCKS)”. When enabled, HTTP-based providers (crt.sh, RDAP, reverse IP, Shodan, Censys) route via the detected proxy. You can also set “Require Tor” to fail requests when Tor isn’t available.
-- Nmap routing: optionally enable “Route Nmap via Tor (proxychains)” in Settings if you configure proxychains in your environment. This is advanced, slower, and may give incomplete results.
+Docker Compose (with Tor proxy) — Recommended
+- docker compose up --build -d
+- Services on a shared network:
+  - tor: Tor SOCKS5 proxy, available at hostname tor:9050 to other containers (not exposed to host by default).
+  - web: the app, configured to prefer socks5://tor:9050 automatically.
+- Check status:
+  - docker compose ps
+  - docker compose logs -f tor  # wait for "Bootstrapped 100%"
+  - docker compose logs -f web  # wait for "Uvicorn running on 0.0.0.0:8000"
+- Open UI:
+  - http://localhost:8000  (or http://<server-ip>:8000)
+
+Tor routing in app
+- The app detects a SOCKS proxy in this order:
+  1) TOR_SOCKS_URL env
+  2) socks5://tor:9050 (compose service)
+  3) socks5://127.0.0.1:9050 (local)
+- In Settings > Nmap & Tor:
+  - Toggle "Route HTTP via Tor (SOCKS)" to route HTTP providers via Tor (crt.sh, RDAP, reverse IP, Shodan, Censys).
+  - Toggle "Require Tor" to fail analyze when Tor is unavailable.
+  - Toggle "Route Nmap via Tor (proxychains)" to run Nmap through proxychains (slower, best-effort).
+- The header shows Tor availability and whether routing is enabled, plus exit IP/country when available.
+
+Troubleshooting Tor
+- If you see "Tor: not detected":
+  - Ensure tor container is up (docker compose logs -f tor; wait for Bootstrapped 100%)
+  - Refresh the page; status is polled periodically.
+- If you run another Tor on the host (e.g., Tor Browser on 9150), set SOCKS URL in Settings to socks5://127.0.0.1:9150
+- If you need tor exposed to the host, uncomment the ports mapping in docker-compose.yml for tor (9050:9050), but ensure 9050 is free.
+
+PDF Report
+- Click "Create PDF Report" to generate a styled PDF with:
+  - WHOIS, Subdomains, DNS A/CNAME, Reverse IP, IP Info (RDAP), Open Ports (Nmap)
+  - Tor routing status and Tor exit IP/country
+  - Embedded graph PNG screenshot
+
+Notes
+- WHOIS parsing is best-effort and normalizes CRLF banners; raw WHOIS is included at the end of the report.
+- Reverse IP via public endpoints is rate-limited; consider using a commercial provider in production.
 
 Setup script (recommended)
 - Run: bash setup.sh
