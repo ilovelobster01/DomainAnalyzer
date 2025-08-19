@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Dict, Iterable
+from typing import Dict, Iterable, Optional
 
 import httpx
 
@@ -47,11 +47,12 @@ async def _rdap_one(client: httpx.AsyncClient, ip: str) -> dict:
         return {}
 
 
-async def ip_rdap_many(ips: Iterable[str]) -> Dict[str, dict]:
+async def ip_rdap_many(ips: Iterable[str], proxies: Optional[str] = None) -> Dict[str, dict]:
     sem = asyncio.Semaphore(5)
     timeout = httpx.Timeout(20.0, connect=10.0)
     headers = {"User-Agent": "WebReconVisualizer/0.2"}
-    async with httpx.AsyncClient(timeout=timeout, headers=headers) as client:
+    transport = httpx.AsyncHTTPTransport(proxy=proxies) if proxies else None
+    async with httpx.AsyncClient(timeout=timeout, headers=headers, transport=transport) as client:
         async def worker(ip: str):
             async with sem:
                 return ip, await _rdap_one(client, ip)

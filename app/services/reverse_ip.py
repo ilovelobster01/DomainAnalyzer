@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Dict, Iterable, List
+from typing import Dict, Iterable, List, Optional
 
 import httpx
 
@@ -24,13 +24,14 @@ async def _reverse_lookup_one(client: httpx.AsyncClient, ip: str) -> List[str]:
         return []
 
 
-async def reverse_lookup_many(ips: Iterable[str]) -> Dict[str, List[str]]:
+async def reverse_lookup_many(ips: Iterable[str], proxies: Optional[str] = None) -> Dict[str, List[str]]:
     # Limit concurrency to be respectful to the public endpoint
     sem = asyncio.Semaphore(5)
     timeout = httpx.Timeout(20.0, connect=10.0)
     headers = {"User-Agent": "WebReconVisualizer/0.1"}
 
-    async with httpx.AsyncClient(timeout=timeout, headers=headers) as client:
+    transport = httpx.AsyncHTTPTransport(proxy=proxies) if proxies else None
+    async with httpx.AsyncClient(timeout=timeout, headers=headers, transport=transport) as client:
         async def worker(ip: str):
             async with sem:
                 return ip, await _reverse_lookup_one(client, ip)

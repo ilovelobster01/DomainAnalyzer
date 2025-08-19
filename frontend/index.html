@@ -9,8 +9,12 @@
   </head>
   <body>
     <div class="container">
-      <header>
+      <header class="app-header">
         <h1>Web Recon Visualizer</h1>
+        <div class="header-right">
+          <span id="torStatus" class="tor-indicator" title="Tor status"></span>
+          <span id="torStatusText" class="tor-status-text"></span>
+        </div>
         <p>Enter a domain to enumerate subdomains, resolve IPs, and visualize co-hosted domains.</p>
       </header>
 
@@ -26,6 +30,7 @@
           <label><input type="checkbox" id="filter-subdomain" checked /> Subdomains</label>
           <label><input type="checkbox" id="filter-ip" checked /> IPs</label>
           <label><input type="checkbox" id="filter-cohost" checked /> Co-hosts</label>
+          <label><input type="checkbox" id="filter-port" checked /> Ports</label>
         </div>
         <div class="search">
           <input id="search" type="text" placeholder="Search nodes (regex or text)" />
@@ -34,17 +39,23 @@
         <div class="history">
           <select id="historySelect"></select>
           <button id="loadHistoryBtn">Load</button>
+          <button id="rerunBtn">Re-run</button>
           <button id="clearHistoryBtn">Clear History</button>
+          <button id="exportHistoryBtn">Export</button>
+          <button id="importHistoryBtn">Import</button>
+          <input id="importHistoryInput" type="file" accept="application/json" style="display:none" />
+          <button id="clearCacheBtn" title="Clear server cache">Clear Server Cache</button>
         </div>
         <div class="exports">
           <button id="fitBtn">Fit</button>
           <button id="exportPngBtn">Export PNG</button>
           <button id="exportJsonBtn">Export JSON</button>
+          <button id="createReportBtn">Create PDF Report</button>
           <button id="settingsBtn">Settings</button>
         </div>
       </section>
 
-      <div id="settingsModal" class="modal" style="display:none">
+      <div id="settingsModal" class="modal" style="display:none" role="dialog" aria-modal="true">
         <div class="modal-content">
           <h3>Settings</h3>
           <div class="grid">
@@ -61,6 +72,10 @@
                 <label><input type="checkbox" id="opt-amass" checked /> Amass</label>
                 <label><input type="checkbox" id="opt-sublist3r" checked /> Sublist3r</label>
                 <label><input type="checkbox" id="opt-crtsh" checked /> crt.sh</label>
+                <label><input type="checkbox" id="opt-subfinder" /> Subfinder</label>
+                <label><input type="checkbox" id="opt-securitytrails" /> SecurityTrails</label>
+                <label><input type="checkbox" id="opt-shodan" /> Shodan (reverse IP)</label>
+                <label><input type="checkbox" id="opt-censys" /> Censys (coming soon)</label>
               </div>
             </div>
             <div>
@@ -72,17 +87,39 @@
               </div>
             </div>
             <div>
-              <label>Nmap</label>
+              <label>Nmap & Tor</label>
               <div class="providers">
                 <label><input type="checkbox" id="opt-nmap-enabled" /> Probe with Nmap</label>
+                <label><input type="checkbox" id="opt-nmap-via-tor" /> Route Nmap via Tor (proxychains)</label>
+                <small id="proxychainsHint" style="color:#6b7280"></small>
+                <label><input type="checkbox" id="opt-proxy-enabled" /> Route HTTP via Tor (SOCKS)</label>
+                <label><input type="checkbox" id="opt-proxy-require" /> Require Tor (fail if unavailable)</label>
               </div>
               <div class="timeouts">
-                <label>Top ports <input type="number" id="opt-nmap-topports" value="100" min="10" max="5000" /></label>
+                <label>Top ports <input type="number" id="opt-nmap-topports" value="100" min="10" max="5000" title="Ignored if ports spec is set"/></label>
                 <label>Timing <select id="opt-nmap-timing"><option>T3</option><option selected>T4</option><option>T5</option></select></label>
                 <label><input type="checkbox" id="opt-nmap-pn" checked /> Skip host discovery (-Pn)</label>
                 <label><input type="checkbox" id="opt-nmap-udp" /> UDP (slower)</label>
                 <label>Timeout/host (s) <input type="number" id="opt-nmap-timeout" value="60" min="10" max="600" /></label>
                 <label>Concurrency <input type="number" id="opt-nmap-conc" value="3" min="1" max="10" /></label>
+                <label>Ports spec <input type="text" id="opt-nmap-ports" placeholder="e.g. 22,80,443 or 1-1024" /></label>
+                <fieldset style="border:1px solid #e5e7eb;padding:6px;border-radius:6px;display:flex;gap:8px;flex-wrap:wrap">
+                  <legend>Common ports</legend>
+                  <label><input type="checkbox" class="nmap-port-chk" value="22"/> 22/ssh</label>
+                  <label><input type="checkbox" class="nmap-port-chk" value="80"/> 80/http</label>
+                  <label><input type="checkbox" class="nmap-port-chk" value="443"/> 443/https</label>
+                  <label><input type="checkbox" class="nmap-port-chk" value="3389"/> 3389/rdp</label>
+                  <label><input type="checkbox" class="nmap-port-chk" value="8080"/> 8080/http-alt</label>
+                  <label><input type="checkbox" class="nmap-port-chk" value="8443"/> 8443/https-alt</label>
+                  <label><input type="checkbox" class="nmap-port-chk" value="53"/> 53/dns</label>
+                  <label><input type="checkbox" class="nmap-port-chk" value="25"/> 25/smtp</label>
+                  <label><input type="checkbox" class="nmap-port-chk" value="110"/> 110/pop3</label>
+                  <label><input type="checkbox" class="nmap-port-chk" value="143"/> 143/imap</label>
+                  <label><input type="checkbox" class="nmap-port-chk" value="3306"/> 3306/mysql</label>
+                  <label><input type="checkbox" class="nmap-port-chk" value="5432"/> 5432/postgres</label>
+                  <label><input type="checkbox" class="nmap-port-chk" value="6379"/> 6379/redis</label>
+                </fieldset>
+                <label style="flex:1">SOCKS URL <input style="min-width:260px;width:100%" type="text" id="opt-proxy-socks" placeholder="socks5://tor:9050" /></label>
               </div>
             </div>
           </div>
@@ -95,6 +132,47 @@
 
       <div id="ctxMenu" class="ctx-menu" style="display:none">
         <ul></ul>
+      </div>
+
+      <div id="nmapModal" class="modal" style="display:none" role="dialog" aria-modal="true">
+        <div class="modal-content">
+          <h3>Nmap probe</h3>
+          <p>Target IP: <strong id="nmapTarget">-</strong></p>
+          <div class="grid">
+            <div>
+              <label><input type="checkbox" id="nmap-enabled" /> Enable Nmap</label>
+            </div>
+            <div class="timeouts">
+              <label>Top ports <input type="number" id="nmap-topports" value="100" min="10" max="5000" title="Ignored if ports spec is set"/></label>
+              <label>Timing <select id="nmap-timing"><option>T3</option><option selected>T4</option><option>T5</option></select></label>
+              <label><input type="checkbox" id="nmap-pn" checked /> Skip host discovery (-Pn)</label>
+              <label><input type="checkbox" id="nmap-udp" /> UDP (slower)</label>
+              <label>Timeout/host (s) <input type="number" id="nmap-timeout" value="60" min="10" max="600" /></label>
+              <label>Concurrency <input type="number" id="nmap-conc" value="1" min="1" max="10" /></label>
+              <label>Ports spec <input type="text" id="nmap-ports" placeholder="e.g. 22,80,443 or 1-1024" /></label>
+              <fieldset style="border:1px solid #e5e7eb;padding:6px;border-radius:6px;display:flex;gap:8px;flex-wrap:wrap">
+                <legend>Common ports</legend>
+                <label><input type="checkbox" class="nmapm-port-chk" value="22"/> 22/ssh</label>
+                <label><input type="checkbox" class="nmapm-port-chk" value="80"/> 80/http</label>
+                <label><input type="checkbox" class="nmapm-port-chk" value="443"/> 443/https</label>
+                <label><input type="checkbox" class="nmapm-port-chk" value="3389"/> 3389/rdp</label>
+                <label><input type="checkbox" class="nmapm-port-chk" value="8080"/> 8080/http-alt</label>
+                <label><input type="checkbox" class="nmapm-port-chk" value="8443"/> 8443/https-alt</label>
+                <label><input type="checkbox" class="nmapm-port-chk" value="53"/> 53/dns</label>
+                <label><input type="checkbox" class="nmapm-port-chk" value="25"/> 25/smtp</label>
+                <label><input type="checkbox" class="nmapm-port-chk" value="110"/> 110/pop3</label>
+                <label><input type="checkbox" class="nmapm-port-chk" value="143"/> 143/imap</label>
+                <label><input type="checkbox" class="nmapm-port-chk" value="3306"/> 3306/mysql</label>
+                <label><input type="checkbox" class="nmapm-port-chk" value="5432"/> 5432/postgres</label>
+                <label><input type="checkbox" class="nmapm-port-chk" value="6379"/> 6379/redis</label>
+              </fieldset>
+            </div>
+          </div>
+          <div class="actions">
+            <button id="nmapRun">Run</button>
+            <button id="nmapCancel">Cancel</button>
+          </div>
+        </div>
       </div>
 
       <section class="content">

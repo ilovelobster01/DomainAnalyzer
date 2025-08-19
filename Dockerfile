@@ -13,14 +13,30 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install tools needed for Amass
-RUN apt-get update && apt-get install -y --no-install-recommends curl unzip ca-certificates nmap && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends curl unzip ca-certificates nmap proxychains4 && rm -rf /var/lib/apt/lists/*
 
-# Install Amass in the image via official release (Linux amd64 example)
-ARG AMASS_VERSION=v3.25.1
-RUN curl -fsSL -o /tmp/amass.zip https://github.com/owasp-amass/amass/releases/download/${AMASS_VERSION}/amass_Linux_amd64.zip \
-    && unzip -q /tmp/amass.zip -d /opt/amass \
-    && install -m 0755 /opt/amass/*/amass /usr/local/bin/amass \
-    && rm -rf /tmp/amass.zip /opt/amass
+# Configure proxychains to use tor service on docker network by default
+RUN printf "strict_chain\nquiet_mode\ndns_proxy\nremote_dns_subnet 224\n[ProxyList]\nsocks5 tor 9050\n" > /etc/proxychains.conf
+
+# Install Amass in the image via official release (detect arch)
+ARG AMASS_VERSION=v4.1.0
+ARG TARGETARCH
+RUN set -eux; \
+    arch="${TARGETARCH:-$(dpkg --print-architecture)}"; \
+    case "$arch" in \
+      amd64|x86_64) AMASS_ARCH=amd64 ;; \
+      arm64|aarch64) AMASS_ARCH=arm64 ;; \
+      *) AMASS_ARCH=amd64 ;; \
+    esac; \
+    for OSNAME in Linux linux; do \
+      URL="https://github.com/owasp-amass/amass/releases/download/${AMASS_VERSION}/amass_${OSNAME}_${AMASS_ARCH}.zip"; \
+      echo "Attempting $URL"; \
+      if curl -fsSL -o /tmp/amass.zip "$URL"; then break; fi; \
+    done; \
+    test -s /tmp/amass.zip; \
+    unzip -q /tmp/amass.zip -d /opt/amass; \
+    install -m 0755 /opt/amass/*/amass /usr/local/bin/amass; \
+    rm -rf /tmp/amass.zip /opt/amass
 
 # Ensure Sublist3r CLI via pip remains available
 

@@ -3,17 +3,21 @@ from __future__ import annotations
 import asyncio
 import xml.etree.ElementTree as ET
 from typing import Dict, Iterable, List, Optional
+import shutil
 
 
-def _build_nmap_cmd(ip: str, *, top_ports: int = 100, timing: str = "T4", skip_host_discovery: bool = True, udp: bool = False) -> List[str]:
+def _build_nmap_cmd(ip: str, *, top_ports: int = 100, timing: str = "T4", skip_host_discovery: bool = True, udp: bool = False, ports_spec: Optional[str] = None) -> List[str]:
     cmd: List[str] = [
         "nmap",
         "-n",  # no DNS
         f"-{timing}",
-        "--top-ports", str(int(top_ports)),
         "-sT",  # TCP connect scan (no root required)
         "-oX", "-",  # XML to stdout
     ]
+    if ports_spec:
+        cmd.extend(["-p", ports_spec])
+    else:
+        cmd.extend(["--top-ports", str(int(top_ports))])
     if skip_host_discovery:
         cmd.append("-Pn")
     if udp:
@@ -22,8 +26,12 @@ def _build_nmap_cmd(ip: str, *, top_ports: int = 100, timing: str = "T4", skip_h
     return cmd
 
 
-async def _run_nmap(ip: str, *, top_ports: int, timing: str, skip_host_discovery: bool, udp: bool, timeout: int) -> Dict:
-    cmd = _build_nmap_cmd(ip, top_ports=top_ports, timing=timing, skip_host_discovery=skip_host_discovery, udp=udp)
+async def _run_nmap(ip: str, *, top_ports: int, timing: str, skip_host_discovery: bool, udp: bool, timeout: int, use_proxychains: bool = False, ports_spec: Optional[str] = None) -> Dict:
+    cmd = _build_nmap_cmd(ip, top_ports=top_ports, timing=timing, skip_host_discovery=skip_host_discovery, udp=udp, ports_spec=ports_spec)
+    if use_proxychains and shutil.which('proxychains4'):
+        cmd = ['proxychains4'] + cmd
+    elif use_proxychains and shutil.which('proxychains'):
+        cmd = ['proxychains'] + cmd
     try:
         proc = await asyncio.create_subprocess_exec(
             *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
@@ -75,11 +83,11 @@ def _parse_nmap_xml(xml_text: str) -> Dict:
     return out
 
 
-async def probe_nmap_many(ips: Iterable[str], *, top_ports: int = 100, timing: str = "T4", skip_host_discovery: bool = True, udp: bool = False, timeout_per_host: int = 60, concurrency: int = 3) -> Dict[str, Dict]:
+async def probe_nmap_many(ips: Iterable[str], *, top_ports: int = 100, timing: str = "T4", skip_host_discovery: bool = True, udp: bool = False, timeout_per_host: int = 60, concurrency: int = 3, use_proxychains: bool = False, ports_spec: Optional[str] = None) -> Dict[str, Dict]:
     sem = asyncio.Semaphore(concurrency)
     async def worker(ip: str):
         async with sem:
-            return ip, await _run_nmap(ip, top_ports=top_ports, timing=timing, skip_host_discovery=skip_host_discovery, udp=udp, timeout=timeout_per_host)
+            return ip, await _run_nmap(ip, top_ports=top_ports, timing=timing, skip_host_discovery=skip_host_discovery, udp=udp, timeout=timeout_per_host, use_proxychains=use_proxychains, ports_spec=ports_spec)
     tasks = [worker(ip) for ip in ips]
     res = await asyncio.gather(*tasks)
     return {ip: data for ip, data in res}

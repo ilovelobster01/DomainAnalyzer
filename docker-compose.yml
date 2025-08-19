@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  tor:
+    image: dperson/torproxy:latest
+    container_name: tor
+    restart: unless-stopped
+    environment:
+      - TOR_NewCircuitPeriod=30
+      - TOR_MaxCircuitDirtiness=600
+    ports:
+      - "9050:9050"  # expose to host for local dev if desired
+    networks:
+      - tor_net
+
+  web:
+    build: .
+    container_name: web-recon
+    restart: unless-stopped
+    environment:
+      - TOR_SOCKS_URL=socks5://tor:9050
+    ports:
+      - "8000:8000"
+    depends_on:
+      - tor
+    networks:
+      - tor_net
+
+networks:
+  tor_net:
+    driver: bridge

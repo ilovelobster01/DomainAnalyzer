@@ -10,6 +10,7 @@ import tempfile
 from typing import Iterable, List, Set, Optional, Dict, Any
 
 import httpx
+from typing import Optional
 
 
 def _clean_domain(name: str) -> str:
@@ -78,13 +79,14 @@ async def _sublist3r_enum(domain: str, timeout: int = 360, threads: int = 40) ->
             pass
 
 
-async def _crtsh_enum(domain: str, timeout_secs: int = 20) -> Set[str]:
+async def _crtsh_enum(domain: str, timeout_secs: int = 20, proxies: Optional[str] = None) -> Set[str]:
     url = f"https://crt.sh/?q=%25.{domain}&output=json"
     subs: Set[str] = set()
     timeout = httpx.Timeout(timeout_secs, connect=min(10.0, timeout_secs))
     headers = {"User-Agent": "WebReconVisualizer/0.1"}
     try:
-        async with httpx.AsyncClient(timeout=timeout, headers=headers) as client:
+        transport = httpx.AsyncHTTPTransport(proxy=proxies) if proxies else None
+        async with httpx.AsyncClient(timeout=timeout, headers=headers, transport=transport) as client:
             r = await client.get(url)
             if r.status_code != 200:
                 return set()
@@ -142,11 +144,18 @@ async def _subfinder_enum(domain: str, timeout: int = 240, extra_args: Optional[
     return subs
 
 
-async def enumerate_subdomains(domain: str, options: Optional[Dict[str, Any]] = None) -> Set[str]:
+async def enumerate_subdomains(domain: str, options: Optional[Dict[str, Any]] = None):  # returns (set, by_source)
+    
     opts = options or {}
-    providers = opts.get("providers", {"amass": True, "sublist3r": True, "crtsh": True, "subfinder": False})
+    providers = opts.get("providers", {"amass": True, "sublist3r": True, "crtsh": True, "subfinder": False, "securitytrails": False})
     mode = opts.get("mode", "passive")
     timeouts = opts.get("timeouts", {"amass": 240, "sublist3r": 360, "crtsh": 20})
+    proxies = None
+    try:
+        if opts.get('proxy', {}).get('enabled'):
+            proxies = opts.get('proxy', {}).get('socks_url')
+    except Exception:
+        proxies = None
 
     tasks = []
     if providers.get("amass"):
@@ -154,14 +163,26 @@ async def enumerate_subdomains(domain: str, options: Optional[Dict[str, Any]] = 
     if providers.get("sublist3r"):
         tasks.append(_sublist3r_enum(domain, timeout=int(timeouts.get("sublist3r", 360))))
     if providers.get("crtsh"):
-        tasks.append(_crtsh_enum(domain, timeout_secs=int(timeouts.get("crtsh", 20))))
+        tasks.append(_crtsh_enum(domain, timeout_secs=int(timeouts.get("crtsh", 20)), proxies=proxies))
     if providers.get("subfinder", False):
         tasks.append(_subfinder_enum(domain, timeout=int(timeouts.get("subfinder", 240))))
+    if providers.get("securitytrails", False):
+        # Will be executed in main for API key; keep slot for alignment
+        tasks.append(asyncio.sleep(0, result=set()))
 
     results_list = await asyncio.gather(*tasks) if tasks else []
     results: Set[str] = set()
-    for s in results_list:
-        results.update(s)
+    by_source: Dict[str, Set[str]] = {}
+
+    idx = 0
+    if providers.get("amass"):
+        by_source["amass"] = set(results_list[idx]); results.update(results_list[idx]); idx += 1
+    if providers.get("sublist3r"):
+        by_source["sublist3r"] = set(results_list[idx]); results.update(results_list[idx]); idx += 1
+    if providers.get("crtsh"):
+        by_source["crtsh"] = set(results_list[idx]); results.update(results_list[idx]); idx += 1
+    if providers.get("subfinder", False):
+        by_source["subfinder"] = set(results_list[idx]); results.update(results_list[idx]); idx += 1
 
     results.discard(domain)
-    return results
+    return results, {k: sorted(v) for k, v in by_source.items()}

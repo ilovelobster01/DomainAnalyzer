@@ -17,6 +17,13 @@ Subdomain enumeration
   - Sublist3r example install: `pip install sublist3r` (also provides `sublist3r` CLI)
 - Fallback: crt.sh passive enumeration if neither tool is available.
 
+Environment and providers
+- Create a .env file (or set env vars) to enable additional providers:
+  - SECURITYTRAILS_API_KEY=<your_key>
+  - SHODAN_API_KEY=<your_key>
+  - CENSYS_API_ID=<your_id>
+  - CENSYS_API_SECRET=<your_secret>
+
 Amass/Sublist3r installation
 - Sublist3r (Python package & CLI):
   - pip install sublist3r
@@ -55,10 +62,26 @@ Quick start
    http://localhost:8000
 
 Docker
-- Build: docker build -t web-recon .
+- Build (auto-arch): docker buildx build --platform linux/amd64,linux/arm64 -t web-recon .
+  - If you are on Apple Silicon (arm64) and want a single-arch image: docker buildx build --platform linux/arm64 -t web-recon .
+  - If you are on x86_64: docker build -t web-recon .
 - Run:   docker run --rm -p 8000:8000 web-recon
   Then visit http://localhost:8000
-- Includes Amass installed from the official release by default.
+- Includes Amass and Nmap installed from official sources by default.
+
+Docker Compose (with Tor proxy)
+- A docker-compose.yml is provided to run a dedicated Tor SOCKS5 proxy alongside the web app.
+- Quick start:
+  - docker compose up --build
+  - This brings up two services on a shared network:
+    - tor: SOCKS5 proxy exposed as host:9050 and available to other containers at hostname tor:9050
+    - web: the app, configured by default to prefer socks5://tor:9050 if reachable
+- The app will attempt to detect a SOCKS proxy in this order:
+  1) TOR_SOCKS_URL env (if set)
+  2) socks5://tor:9050 (Docker Compose service)
+  3) socks5://127.0.0.1:9050 (local Tor)
+- In Settings, you can toggle “Route HTTP via Tor (SOCKS)”. When enabled, HTTP-based providers (crt.sh, RDAP, reverse IP, Shodan, Censys) route via the detected proxy. You can also set “Require Tor” to fail requests when Tor isn’t available.
+- Nmap routing: optionally enable “Route Nmap via Tor (proxychains)” in Settings if you configure proxychains in your environment. This is advanced, slower, and may give incomplete results.
 
 Setup script (recommended)
 - Run: bash setup.sh

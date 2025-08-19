@@ -19,14 +19,14 @@ install_system_deps() {
   echo "==> Installing system dependencies (whois, curl, unzip) if possible"
   if has_cmd apt-get; then
     sudo apt-get update -y
-    sudo apt-get install -y whois curl unzip
+    sudo apt-get install -y whois curl unzip nmap
   elif has_cmd yum; then
-    sudo yum install -y whois curl unzip
+    sudo yum install -y whois curl unzip nmap
   elif has_cmd brew; then
     brew update
-    brew install whois unzip || true
+    brew install whois unzip nmap || true
   else
-    echo "-> No known package manager found. Please ensure whois, curl, unzip are installed. Continuing..."
+    echo "-> No known package manager found. Please ensure whois, curl, unzip, and nmap are installed. Continuing..."
   fi
 }
 
